@@ -11,13 +11,19 @@ import {
   startNextRound,
 } from "@/lib/eliminationUtils";
 import { supabase } from "@/lib/supabase";
-import { resolveVote } from "@/lib/voteUtils";
+import { getVoteCounts, resolveVote } from "@/lib/voteUtils";
 
 type VotePageState = {
   roomCode: string;
   playerId: string;
   round: number;
   isAlive: boolean;
+};
+
+type VoteBreakdown = {
+  targetId: string;
+  targetName: string;
+  count: number;
 };
 
 const VOTE_RESULT_DELAY_MS = 3000;
@@ -30,6 +36,8 @@ function VoteContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [resultMessage, setResultMessage] = useState("");
+  const [voteBreakdown, setVoteBreakdown] = useState<VoteBreakdown[]>([]);
+  const [hasResolvedVote, setHasResolvedVote] = useState(false);
   const hasAdvancedRef = useRef(false);
 
   useEffect(() => {
@@ -96,6 +104,10 @@ function VoteContent() {
     setErrorMessage("");
 
     try {
+      const counts = await getVoteCounts(voteState.roomCode, voteState.round);
+      setVoteBreakdown(counts);
+      setHasResolvedVote(true);
+
       const voteResult = await resolveVote(voteState.roomCode, voteState.round);
 
       if (voteResult.isTie || !voteResult.eliminatedPlayerId) {
@@ -174,6 +186,22 @@ function VoteContent() {
               void handleVotingComplete();
             }}
           />
+          {hasResolvedVote ? (
+            <div className="space-y-2">
+              <h2 className="text-center text-lg font-semibold">Vote Results</h2>
+              {voteBreakdown.length === 0 ? (
+                <p className="text-center">No votes were cast.</p>
+              ) : (
+                <ul className="space-y-1 text-center">
+                  {voteBreakdown.map((voteCount) => (
+                    <li key={voteCount.targetId}>
+                      {voteCount.targetName}: {voteCount.count}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
           {resultMessage ? <p className="text-center">{resultMessage}</p> : null}
         </section>
       </main>

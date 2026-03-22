@@ -20,6 +20,7 @@ type NightState = {
   role: string;
   round: number;
   isHost: boolean;
+  livingPlayerCount: number;
 };
 
 const NIGHT_TRANSITION_DELAY_MS = 3000;
@@ -45,6 +46,7 @@ function NightContent() {
       const [
         { data: player, error: playerError },
         { data: gameState, error: gameStateError },
+        { data: livingPlayers, error: livingPlayersError },
       ] = await Promise.all([
         supabase
           .from("players")
@@ -57,6 +59,11 @@ function NightContent() {
           .select("round_number, night_sub_phase")
           .eq("room_code", roomCode)
           .maybeSingle(),
+        supabase
+          .from("players")
+          .select("id")
+          .eq("room_code", roomCode)
+          .eq("is_alive", true),
       ]);
 
       if (playerError) {
@@ -73,6 +80,14 @@ function NightContent() {
         return;
       }
 
+      if (livingPlayersError) {
+        setErrorMessage(
+          `Could not load living player count: ${livingPlayersError.message}`
+        );
+        setIsLoading(false);
+        return;
+      }
+
       if (!player?.role || !gameState) {
         setErrorMessage("Could not find the night phase data for this player.");
         setIsLoading(false);
@@ -83,6 +98,7 @@ function NightContent() {
         role: player.role as string,
         round: gameState.round_number as number,
         isHost: Boolean(player.is_host),
+        livingPlayerCount: (livingPlayers ?? []).length,
       });
       setNightSubPhase((gameState.night_sub_phase as NightSubPhase) ?? "none");
       setIsLoading(false);
@@ -161,6 +177,7 @@ function NightContent() {
             roomCode={roomCode}
             playerId={playerId}
             round={currentNightState.round}
+            livingPlayerCount={currentNightState.livingPlayerCount}
             onActionSubmitted={() => {
               void handleAdvance(
                 "mafia-to-doctor",
@@ -184,6 +201,7 @@ function NightContent() {
             roomCode={roomCode}
             playerId={playerId}
             round={currentNightState.round}
+            livingPlayerCount={currentNightState.livingPlayerCount}
             onActionSubmitted={() => {
               void handleAdvance(
                 "doctor-to-detective",
@@ -207,6 +225,7 @@ function NightContent() {
             roomCode={roomCode}
             playerId={playerId}
             round={currentNightState.round}
+            livingPlayerCount={currentNightState.livingPlayerCount}
             onActionSubmitted={() => {
               void handleAdvance(
                 "detective-to-day",

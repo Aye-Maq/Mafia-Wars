@@ -219,4 +219,15 @@ export async function resetGame(roomCode: string): Promise<void> {
       `Game reset started, but clearing night actions failed: ${nightActionsError.message}`
     );
   }
+
+  const { error: timerVotesError } = await supabase
+    .from("timer_votes")
+    .delete()
+    .eq("room_code", normalizedRoomCode);
+
+  if (timerVotesError) {
+    throw new Error(
+      `Game reset started, but clearing timer votes failed: ${timerVotesError.message}`
+    );
+  }
 }

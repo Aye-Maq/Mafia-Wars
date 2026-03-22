@@ -108,6 +108,33 @@ async function getSingleNightTarget(
   return firstAction?.target_id ?? null;
 }
 
+export async function getDetectiveResult(
+  roomCode: string,
+  round: number
+): Promise<"correct" | "incorrect" | null> {
+  const targetId = await getSingleNightTarget(
+    roomCode,
+    round,
+    "detective_investigate"
+  );
+
+  if (!targetId) {
+    return null;
+  }
+
+  const { data: player, error } = await supabase
+    .from("players")
+    .select("role")
+    .eq("id", targetId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load detective result: ${error.message}`);
+  }
+
+  return player?.role === "mafia" ? "correct" : "incorrect";
+}
+
 export async function resolveNight(
   roomCode: string,
   round: number

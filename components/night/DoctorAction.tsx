@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import TimerControls from "@/components/TimerControls";
 import { NIGHT_ACTION_TIMER } from "@/lib/constants";
 import { submitNightAction } from "@/lib/nightUtils";
 import { supabase } from "@/lib/supabase";
@@ -15,6 +16,7 @@ type DoctorActionProps = {
   roomCode: string;
   playerId: string;
   round: number;
+  livingPlayerCount: number;
   onActionSubmitted: () => void;
 };
 
@@ -22,6 +24,7 @@ export default function DoctorAction({
   roomCode,
   playerId,
   round,
+  livingPlayerCount,
   onActionSubmitted,
 }: DoctorActionProps) {
   const [targets, setTargets] = useState<TargetPlayer[]>([]);
@@ -86,6 +89,15 @@ export default function DoctorAction({
     };
   }, [hasSubmitted, onActionSubmitted]);
 
+  function completeAction() {
+    if (hasSubmitted) {
+      return;
+    }
+
+    setHasSubmitted(true);
+    onActionSubmitted();
+  }
+
   async function handleSubmitSave() {
     if (!selectedTargetId) {
       setErrorMessage("Select a player before saving.");
@@ -103,8 +115,7 @@ export default function DoctorAction({
         selectedTargetId,
         round
       );
-      setHasSubmitted(true);
-      onActionSubmitted();
+      completeAction();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Could not submit the save."
@@ -152,6 +163,17 @@ export default function DoctorAction({
       >
         {isSubmitting ? "Submitting..." : "Submit Save"}
       </button>
+      <TimerControls
+        roomCode={roomCode}
+        playerId={playerId}
+        phase="doctor"
+        round={round}
+        livingPlayerCount={livingPlayerCount}
+        onSkipApproved={completeAction}
+        onExtend={() => {
+          setSecondsRemaining((currentSeconds) => currentSeconds + 60);
+        }}
+      />
     </div>
   );
 }

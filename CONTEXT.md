@@ -38,12 +38,16 @@ Full game loop is built end to end. Audio and polish remain.
 - [x] End screen built with full role reveal and Play Again
 - [x] Win condition checks integrated after every elimination
 - [x] Full game loop is complete end to end
+- [x] Timer controls added to all timed screens - Skip requires majority, Extend is single player, unlimited
+- [x] Vote counts hidden during voting - only total count shown
+- [x] Detective day announcement added to Day screen
+- [x] timer_votes Supabase table created
 
 ## Up Next
 - [ ] Audio narration for night phase
-- [ ] UI overhaul by Gemini - all pages need dark noir styling
-- [ ] Play Again flow needs full testing
+- [ ] UI overhaul by Gemini
 - [ ] Vercel deployment
+- [ ] End-to-end test with real phones
 
 ## Decisions Made
 - Discussion timer options are 3, 5, or 7 minutes (host picks in lobby)

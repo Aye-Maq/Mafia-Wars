@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import TimerControls from "@/components/TimerControls";
 import { NIGHT_ACTION_TIMER } from "@/lib/constants";
 import { submitNightAction } from "@/lib/nightUtils";
 import { supabase } from "@/lib/supabase";
@@ -16,6 +17,7 @@ type DetectiveActionProps = {
   roomCode: string;
   playerId: string;
   round: number;
+  livingPlayerCount: number;
   onActionSubmitted: () => void;
 };
 
@@ -23,6 +25,7 @@ export default function DetectiveAction({
   roomCode,
   playerId,
   round,
+  livingPlayerCount,
   onActionSubmitted,
 }: DetectiveActionProps) {
   const [targets, setTargets] = useState<TargetPlayer[]>([]);
@@ -88,6 +91,15 @@ export default function DetectiveAction({
       window.clearInterval(interval);
     };
   }, [hasSubmitted, onActionSubmitted]);
+
+  function completeAction() {
+    if (hasSubmitted) {
+      return;
+    }
+
+    setHasSubmitted(true);
+    onActionSubmitted();
+  }
 
   async function handleSubmitInvestigation() {
     if (!selectedTargetId) {
@@ -173,6 +185,17 @@ export default function DetectiveAction({
       >
         {isSubmitting ? "Submitting..." : "Submit Investigation"}
       </button>
+      <TimerControls
+        roomCode={roomCode}
+        playerId={playerId}
+        phase="detective"
+        round={round}
+        livingPlayerCount={livingPlayerCount}
+        onSkipApproved={completeAction}
+        onExtend={() => {
+          setSecondsRemaining((currentSeconds) => currentSeconds + 60);
+        }}
+      />
     </div>
   );
 }

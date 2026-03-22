@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import TimerControls from "@/components/TimerControls";
+import { getDetectiveResult } from "@/lib/nightUtils";
 import { supabase } from "@/lib/supabase";
 
 type EliminatedPlayer = {
@@ -18,19 +20,28 @@ type NightResultPayload = {
 
 type DayAnnouncementProps = {
   roomCode: string;
+  playerId: string;
+  round: number;
   nightResult: string | null;
   timerMinutes: number;
+  livingPlayerCount: number;
+  isAlive: boolean;
   onTimerComplete: () => void;
 };
 
 export default function DayAnnouncement({
   roomCode,
+  playerId,
+  round,
   nightResult,
   timerMinutes,
+  livingPlayerCount,
+  isAlive,
   onTimerComplete,
 }: DayAnnouncementProps) {
   const [announcementText, setAnnouncementText] = useState("Dawn has arrived.");
   const [eliminatedPlayers, setEliminatedPlayers] = useState<EliminatedPlayer[]>([]);
+  const [detectiveAnnouncement, setDetectiveAnnouncement] = useState("");
   const [secondsRemaining, setSecondsRemaining] = useState(timerMinutes * 60);
   const [errorMessage, setErrorMessage] = useState("");
   const hasCompletedRef = useRef(false);
@@ -43,30 +54,43 @@ export default function DayAnnouncement({
     let isMounted = true;
 
     async function loadAnnouncementData() {
-      const { data: deadPlayers, error: deadPlayersError } = await supabase
-        .from("players")
-        .select("id, name, role")
-        .eq("room_code", roomCode)
-        .eq("is_alive", false);
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (deadPlayersError) {
-        setErrorMessage(
-          `Could not load eliminated players: ${deadPlayersError.message}`
-        );
-      } else {
-        setEliminatedPlayers((deadPlayers ?? []) as EliminatedPlayer[]);
-      }
-
-      if (!nightResult) {
-        setAnnouncementText("Dawn has arrived.");
-        return;
-      }
-
       try {
+        const [deadPlayersResult, detectiveResult] = await Promise.all([
+          supabase
+            .from("players")
+            .select("id, name, role")
+            .eq("room_code", roomCode)
+            .eq("is_alive", false),
+          getDetectiveResult(roomCode, round),
+        ]);
+
+        const { data: deadPlayers, error: deadPlayersError } = deadPlayersResult;
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (deadPlayersError) {
+          setErrorMessage(
+            `Could not load eliminated players: ${deadPlayersError.message}`
+          );
+        } else {
+          setEliminatedPlayers((deadPlayers ?? []) as EliminatedPlayer[]);
+        }
+
+        if (detectiveResult === "correct") {
+          setDetectiveAnnouncement("The detective detected the Mafia.");
+        } else if (detectiveResult === "incorrect") {
+          setDetectiveAnnouncement("The detective did not detect the Mafia.");
+        } else {
+          setDetectiveAnnouncement("");
+        }
+
+        if (!nightResult) {
+          setAnnouncementText("Dawn has arrived.");
+          return;
+        }
+
         const parsedNightResult = JSON.parse(nightResult) as NightResultPayload;
 
         if (!parsedNightResult.killedPlayerId) {
@@ -90,7 +114,16 @@ export default function DayAnnouncement({
         }
 
         setAnnouncementText(`${killedPlayer.name} was found dead this morning.`);
-      } catch {
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Could not load the day announcement."
+        );
         setAnnouncementText("Dawn has arrived.");
       }
     }
@@ -100,18 +133,23 @@ export default function DayAnnouncement({
     return () => {
       isMounted = false;
     };
-  }, [nightResult, roomCode]);
+  }, [nightResult, roomCode, round]);
+
+  const completeTimer = useCallback(() => {
+    if (hasCompletedRef.current) {
+      return;
+    }
+
+    hasCompletedRef.current = true;
+    onTimerComplete();
+  }, [onTimerComplete]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
       setSecondsRemaining((currentSeconds) => {
         if (currentSeconds <= 1) {
           window.clearInterval(interval);
-
-          if (!hasCompletedRef.current) {
-            hasCompletedRef.current = true;
-            onTimerComplete();
-          }
+          completeTimer();
 
           return 0;
         }
@@ -123,7 +161,7 @@ export default function DayAnnouncement({
     return () => {
       window.clearInterval(interval);
     };
-  }, [onTimerComplete]);
+  }, [completeTimer]);
 
   const minutes = Math.floor(secondsRemaining / 60);
   const seconds = secondsRemaining % 60;
@@ -132,6 +170,7 @@ export default function DayAnnouncement({
     <div className="space-y-6">
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold">{announcementText}</h1>
+        {detectiveAnnouncement ? <p>{detectiveAnnouncement}</p> : null}
         <p>Discuss and find the Mafia among you.</p>
         <p className="text-xl">
           {minutes}:{seconds.toString().padStart(2, "0")}
@@ -154,6 +193,20 @@ export default function DayAnnouncement({
           </ul>
         )}
       </div>
+
+      {isAlive ? (
+        <TimerControls
+          roomCode={roomCode}
+          playerId={playerId}
+          phase="day"
+          round={round}
+          livingPlayerCount={livingPlayerCount}
+          onSkipApproved={completeTimer}
+          onExtend={() => {
+            setSecondsRemaining((currentSeconds) => currentSeconds + 60);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

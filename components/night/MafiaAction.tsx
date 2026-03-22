@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import TimerControls from "@/components/TimerControls";
 import { NIGHT_ACTION_TIMER } from "@/lib/constants";
 import { submitNightAction } from "@/lib/nightUtils";
 import { supabase } from "@/lib/supabase";
@@ -15,6 +16,7 @@ type MafiaActionProps = {
   roomCode: string;
   playerId: string;
   round: number;
+  livingPlayerCount: number;
   onActionSubmitted: () => void;
 };
 
@@ -22,6 +24,7 @@ export default function MafiaAction({
   roomCode,
   playerId,
   round,
+  livingPlayerCount,
   onActionSubmitted,
 }: MafiaActionProps) {
   const [targets, setTargets] = useState<TargetPlayer[]>([]);
@@ -87,6 +90,15 @@ export default function MafiaAction({
     };
   }, [hasSubmitted, onActionSubmitted]);
 
+  function completeAction() {
+    if (hasSubmitted) {
+      return;
+    }
+
+    setHasSubmitted(true);
+    onActionSubmitted();
+  }
+
   async function handleSubmitVote() {
     if (!selectedTargetId) {
       setErrorMessage("Select a target before submitting.");
@@ -104,8 +116,7 @@ export default function MafiaAction({
         selectedTargetId,
         round
       );
-      setHasSubmitted(true);
-      onActionSubmitted();
+      completeAction();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Could not submit the mafia vote."
@@ -153,6 +164,17 @@ export default function MafiaAction({
       >
         {isSubmitting ? "Submitting..." : "Submit Vote"}
       </button>
+      <TimerControls
+        roomCode={roomCode}
+        playerId={playerId}
+        phase="mafia"
+        round={round}
+        livingPlayerCount={livingPlayerCount}
+        onSkipApproved={completeAction}
+        onExtend={() => {
+          setSecondsRemaining((currentSeconds) => currentSeconds + 60);
+        }}
+      />
     </div>
   );
 }

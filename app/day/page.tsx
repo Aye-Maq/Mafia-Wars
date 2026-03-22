@@ -11,8 +11,11 @@ import { supabase } from "@/lib/supabase";
 type DayPageState = {
   roomCode: string;
   playerId: string;
+  round: number;
   nightResult: string | null;
   timerMinutes: number;
+  livingPlayerCount: number;
+  isAlive: boolean;
 };
 
 function DayContent() {
@@ -36,16 +39,17 @@ function DayContent() {
         { data: player, error: playerError },
         { data: gameState, error: gameStateError },
         { data: room, error: roomError },
+        { count: livingPlayerCount, error: livingPlayerCountError },
       ] = await Promise.all([
         supabase
           .from("players")
-          .select("id")
+          .select("id, is_alive")
           .eq("id", playerId)
           .eq("room_code", roomCode)
           .maybeSingle(),
         supabase
           .from("game_state")
-          .select("night_result")
+          .select("night_result, round_number")
           .eq("room_code", roomCode)
           .maybeSingle(),
         supabase
@@ -53,6 +57,11 @@ function DayContent() {
           .select("timer_config")
           .eq("room_code", roomCode)
           .maybeSingle(),
+        supabase
+          .from("players")
+          .select("*", { count: "exact", head: true })
+          .eq("room_code", roomCode)
+          .eq("is_alive", true),
       ]);
 
       if (playerError) {
@@ -73,6 +82,14 @@ function DayContent() {
         return;
       }
 
+      if (livingPlayerCountError) {
+        setErrorMessage(
+          `Could not load living player count: ${livingPlayerCountError.message}`
+        );
+        setIsLoading(false);
+        return;
+      }
+
       if (!player || !gameState || !room) {
         setErrorMessage("Could not find the day phase data for this player.");
         setIsLoading(false);
@@ -82,8 +99,11 @@ function DayContent() {
       setDayState({
         roomCode,
         playerId,
+        round: Number(gameState.round_number),
         nightResult: (gameState.night_result as string | null) ?? null,
         timerMinutes: Number(room.timer_config),
+        livingPlayerCount: livingPlayerCount ?? 0,
+        isAlive: Boolean(player.is_alive),
       });
       setIsLoading(false);
     }
@@ -137,8 +157,12 @@ function DayContent() {
         <section className="w-full max-w-2xl">
           <DayAnnouncement
             roomCode={dayState.roomCode}
+            playerId={dayState.playerId}
+            round={dayState.round}
             nightResult={dayState.nightResult}
             timerMinutes={dayState.timerMinutes}
+            livingPlayerCount={dayState.livingPlayerCount}
+            isAlive={dayState.isAlive}
             onTimerComplete={() => {
               void handleTimerComplete();
             }}

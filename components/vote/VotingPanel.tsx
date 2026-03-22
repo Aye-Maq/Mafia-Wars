@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import TimerControls from "@/components/TimerControls";
 import { VOTING_TIMER } from "@/lib/constants";
 import { getVoteCounts, submitVote } from "@/lib/voteUtils";
 import { supabase } from "@/lib/supabase";
@@ -39,6 +40,15 @@ export default function VotingPanel({
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const hasCompletedRef = useRef(false);
+
+  const completeVoting = useCallback(() => {
+    if (hasCompletedRef.current) {
+      return;
+    }
+
+    hasCompletedRef.current = true;
+    onVotingComplete();
+  }, [onVotingComplete]);
 
   useEffect(() => {
     let isMounted = true;
@@ -114,15 +124,11 @@ export default function VotingPanel({
   }, [roomCode, round]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => {
+      const interval = window.setInterval(() => {
       setSecondsRemaining((currentSeconds) => {
         if (currentSeconds <= 1) {
           window.clearInterval(interval);
-
-          if (!hasCompletedRef.current) {
-            hasCompletedRef.current = true;
-            onVotingComplete();
-          }
+          completeVoting();
 
           return 0;
         }
@@ -134,7 +140,7 @@ export default function VotingPanel({
     return () => {
       window.clearInterval(interval);
     };
-  }, [onVotingComplete]);
+  }, [completeVoting]);
 
   async function handleVote(targetId: string) {
     setErrorMessage("");
@@ -151,9 +157,11 @@ export default function VotingPanel({
     }
   }
 
-  function getVoteCount(targetId: string): number {
-    return voteCounts.find((voteCount) => voteCount.targetId === targetId)?.count ?? 0;
-  }
+  const votesCast = voteCounts.reduce(
+    (totalVotes, voteCount) => totalVotes + voteCount.count,
+    0
+  );
+  const livingPlayerCount = targets.length;
 
   if (!isAlive) {
     return (
@@ -175,6 +183,9 @@ export default function VotingPanel({
         {Math.floor(secondsRemaining / 60)}:
         {(secondsRemaining % 60).toString().padStart(2, "0")}
       </p>
+      <p>
+        {votesCast} of {livingPlayerCount} players have voted
+      </p>
       {isLoading ? <p>Loading voting targets...</p> : null}
       {hasVoted ? <p>Vote cast. Waiting for others...</p> : null}
       {errorMessage ? <p className="text-red-600">{errorMessage}</p> : null}
@@ -189,10 +200,21 @@ export default function VotingPanel({
             }}
             disabled={hasVoted}
           >
-            {target.name} ({getVoteCount(target.id)})
+            {target.name}
           </button>
         ))}
       </div>
+      <TimerControls
+        roomCode={roomCode}
+        playerId={playerId}
+        phase="vote"
+        round={round}
+        livingPlayerCount={livingPlayerCount}
+        onSkipApproved={completeVoting}
+        onExtend={() => {
+          setSecondsRemaining((currentSeconds) => currentSeconds + 60);
+        }}
+      />
     </div>
   );
 }
