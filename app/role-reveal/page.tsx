@@ -1,19 +1,21 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
+import PhaseWatcher from "@/components/PhaseWatcher";
 import RoleCard from "@/components/role-reveal/RoleCard";
+import { updatePhase } from "@/lib/gameUtils";
 import { supabase } from "@/lib/supabase";
 
 type RoleRevealState = {
   playerName: string;
   role: string;
   mafiaTeammates: string[];
+  isHost: boolean;
 };
 
 function RoleRevealContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const roomCode = searchParams.get("roomCode") ?? "";
   const playerId = searchParams.get("playerId") ?? "";
@@ -22,6 +24,7 @@ function RoleRevealContent() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isWaitingForNight, setIsWaitingForNight] = useState(false);
 
   useEffect(() => {
     async function loadRoleData() {
@@ -33,7 +36,7 @@ function RoleRevealContent() {
 
       const { data: player, error: playerError } = await supabase
         .from("players")
-        .select("id, room_code, name, role")
+        .select("id, room_code, name, role, is_host")
         .eq("id", playerId)
         .eq("room_code", roomCode)
         .maybeSingle();
@@ -77,6 +80,7 @@ function RoleRevealContent() {
         playerName: player.name as string,
         role: player.role as string,
         mafiaTeammates,
+        isHost: Boolean(player.is_host),
       });
       setIsLoading(false);
     }
@@ -84,8 +88,21 @@ function RoleRevealContent() {
     void loadRoleData();
   }, [playerId, roomCode]);
 
-  function handleRevealComplete() {
-    router.push("/night");
+  async function handleRevealComplete() {
+    setIsWaitingForNight(true);
+
+    if (!roleRevealState?.isHost) {
+      return;
+    }
+
+    try {
+      await updatePhase(roomCode, "night");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Could not start the night phase."
+      );
+      setIsWaitingForNight(false);
+    }
   }
 
   if (isLoading) {
@@ -106,13 +123,37 @@ function RoleRevealContent() {
     );
   }
 
+  if (isWaitingForNight) {
+    return (
+      <>
+        <PhaseWatcher
+          roomCode={roomCode}
+          playerId={playerId}
+          currentPhase="role-reveal"
+        />
+        <main className="flex min-h-screen items-center justify-center p-6">
+          <p>Waiting for night to begin...</p>
+        </main>
+      </>
+    );
+  }
+
   return (
-    <RoleCard
-      role={roleRevealState.role}
-      playerName={roleRevealState.playerName}
-      mafiaTeammates={roleRevealState.mafiaTeammates}
-      onRevealComplete={handleRevealComplete}
-    />
+    <>
+      <PhaseWatcher
+        roomCode={roomCode}
+        playerId={playerId}
+        currentPhase="role-reveal"
+      />
+      <RoleCard
+        role={roleRevealState.role}
+        playerName={roleRevealState.playerName}
+        mafiaTeammates={roleRevealState.mafiaTeammates}
+        onRevealComplete={() => {
+          void handleRevealComplete();
+        }}
+      />
+    </>
   );
 }
 

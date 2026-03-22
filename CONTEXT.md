@@ -25,10 +25,16 @@ Role assignment and role reveal are built. Night phase logic is not built yet.
 - [x] Start Game now triggers real role assignment and navigation
 - [x] Role reveal page built at /app/role-reveal/page.tsx
 - [x] RoleCard component built at /components/role-reveal/RoleCard.tsx
+- [x] PhaseWatcher component built - all players now auto-navigate on phase changes
+- [x] Night phase built: MafiaAction, DoctorAction, DetectiveAction components
+- [x] /lib/nightUtils.ts created for all night action database ops
+- [x] /app/night/page.tsx replaced with real night phase logic
 
 ## Up Next
-- [ ] Night phase: Mafia vote screen, Doctor save screen, Detective investigate screen
-- [ ] All night actions need separate components per role
+- [ ] Day phase: announce who was killed, start discussion timer
+- [ ] Voting phase: players vote to eliminate someone
+- [ ] End phase: full role reveal and winner announcement
+- [ ] Win condition checks after each elimination
 
 ## Decisions Made
 - Discussion timer options are 3, 5, or 7 minutes (host picks in lobby)

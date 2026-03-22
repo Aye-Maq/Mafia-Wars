@@ -1,5 +1,6 @@
 import { MAX_PLAYERS, MIN_PLAYERS } from "@/lib/constants";
 import { assignRoles } from "@/lib/gameLogic";
+import { resolveNight } from "@/lib/nightUtils";
 import { supabase } from "@/lib/supabase";
 import type { Phase, Player } from "@/lib/types";
 
@@ -81,4 +82,49 @@ export async function updatePhase(roomCode: string, phase: Phase): Promise<void>
   if (error) {
     throw new Error(`Failed to update the game phase: ${error.message}`);
   }
+}
+
+export async function finalizeNight(
+  roomCode: string,
+  round: number
+): Promise<void> {
+  const normalizedRoomCode = roomCode.trim().toUpperCase();
+  const updatedAt = new Date().toISOString();
+  const { killedPlayerId, savedPlayerId } = await resolveNight(
+    normalizedRoomCode,
+    round
+  );
+
+  const { error: gameStateUpdateError } = await supabase
+    .from("game_state")
+    .update({
+      night_result: JSON.stringify({
+        killedPlayerId,
+        savedPlayerId,
+        round,
+      }),
+      updated_at: updatedAt,
+    })
+    .eq("room_code", normalizedRoomCode);
+
+  if (gameStateUpdateError) {
+    throw new Error(
+      `Failed to save the night result: ${gameStateUpdateError.message}`
+    );
+  }
+
+  if (killedPlayerId) {
+    const { error: playerUpdateError } = await supabase
+      .from("players")
+      .update({ is_alive: false })
+      .eq("id", killedPlayerId);
+
+    if (playerUpdateError) {
+      throw new Error(
+        `Night result was saved, but updating the killed player failed: ${playerUpdateError.message}`
+      );
+    }
+  }
+
+  await updatePhase(normalizedRoomCode, "day");
 }

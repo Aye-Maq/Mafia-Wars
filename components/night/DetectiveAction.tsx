@@ -1,0 +1,178 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+import { NIGHT_ACTION_TIMER } from "@/lib/constants";
+import { submitNightAction } from "@/lib/nightUtils";
+import { supabase } from "@/lib/supabase";
+
+type TargetPlayer = {
+  id: string;
+  name: string;
+  role: string | null;
+};
+
+type DetectiveActionProps = {
+  roomCode: string;
+  playerId: string;
+  round: number;
+  onActionSubmitted: () => void;
+};
+
+export default function DetectiveAction({
+  roomCode,
+  playerId,
+  round,
+  onActionSubmitted,
+}: DetectiveActionProps) {
+  const [targets, setTargets] = useState<TargetPlayer[]>([]);
+  const [selectedTargetId, setSelectedTargetId] = useState("");
+  const [investigationResult, setInvestigationResult] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [secondsRemaining, setSecondsRemaining] = useState(NIGHT_ACTION_TIMER);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadTargets() {
+      const { data, error } = await supabase
+        .from("players")
+        .select("id, name, role")
+        .eq("room_code", roomCode)
+        .eq("is_alive", true)
+        .neq("id", playerId);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        setErrorMessage(`Could not load investigation targets: ${error.message}`);
+        setIsLoading(false);
+        return;
+      }
+
+      setTargets((data ?? []) as TargetPlayer[]);
+      setIsLoading(false);
+    }
+
+    void loadTargets();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [playerId, roomCode]);
+
+  useEffect(() => {
+    if (hasSubmitted) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setSecondsRemaining((currentSeconds) => {
+        if (currentSeconds <= 1) {
+          window.clearInterval(interval);
+          setHasSubmitted(true);
+          onActionSubmitted();
+          return 0;
+        }
+
+        return currentSeconds - 1;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [hasSubmitted, onActionSubmitted]);
+
+  async function handleSubmitInvestigation() {
+    if (!selectedTargetId) {
+      setErrorMessage("Select a player before investigating.");
+      return;
+    }
+
+    const selectedTarget = targets.find((target) => target.id === selectedTargetId);
+
+    if (!selectedTarget) {
+      setErrorMessage("Could not find the selected player.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage("");
+
+    try {
+      await submitNightAction(
+        roomCode,
+        playerId,
+        "detective_investigate",
+        selectedTargetId,
+        round
+      );
+
+      setHasSubmitted(true);
+      setInvestigationResult(
+        `${selectedTarget.name} is ${
+          selectedTarget.role === "mafia" ? "Mafia" : "Innocent"
+        }`
+      );
+
+      window.setTimeout(() => {
+        onActionSubmitted();
+      }, 5000);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not submit the investigation."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (hasSubmitted) {
+    return (
+      <div className="space-y-4 text-white">
+        <h1 className="text-2xl font-semibold">Detective Investigation</h1>
+        <p>{investigationResult || "Investigation complete. Waiting..."}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 text-white">
+      <h1 className="text-2xl font-semibold">Detective Investigation</h1>
+      <p>{secondsRemaining} seconds remaining</p>
+      {isLoading ? <p>Loading players...</p> : null}
+      {errorMessage ? <p className="text-red-400">{errorMessage}</p> : null}
+      <div className="space-y-2">
+        {targets.map((target) => (
+          <button
+            key={target.id}
+            className={`block w-full rounded border px-4 py-2 text-left ${
+              selectedTargetId === target.id ? "border-white" : "border-gray-600"
+            }`}
+            type="button"
+            onClick={() => setSelectedTargetId(target.id)}
+            disabled={isSubmitting}
+          >
+            {target.name}
+          </button>
+        ))}
+      </div>
+      <button
+        className="w-full rounded bg-white px-4 py-2 text-black disabled:opacity-60"
+        type="button"
+        onClick={handleSubmitInvestigation}
+        disabled={isSubmitting || !selectedTargetId}
+      >
+        {isSubmitting ? "Submitting..." : "Submit Investigation"}
+      </button>
+    </div>
+  );
+}
