@@ -2,7 +2,7 @@ import { MAX_PLAYERS, MIN_PLAYERS } from "@/lib/constants";
 import { assignRoles } from "@/lib/gameLogic";
 import { resolveNight } from "@/lib/nightUtils";
 import { supabase } from "@/lib/supabase";
-import type { Phase, Player } from "@/lib/types";
+import type { NightSubPhase, Phase, Player } from "@/lib/types";
 
 export async function startGame(roomCode: string): Promise<void> {
   const normalizedRoomCode = roomCode.trim().toUpperCase();
@@ -46,6 +46,7 @@ export async function startGame(roomCode: string): Promise<void> {
     .from("game_state")
     .update({
       phase: "role-reveal",
+      night_sub_phase: "none",
       updated_at: updatedAt,
     })
     .eq("room_code", normalizedRoomCode);
@@ -68,19 +69,51 @@ export async function startGame(roomCode: string): Promise<void> {
   }
 }
 
-export async function updatePhase(roomCode: string, phase: Phase): Promise<void> {
+export async function updatePhase(
+  roomCode: string,
+  phase: Phase,
+  nightSubPhase?: NightSubPhase
+): Promise<void> {
+  const normalizedRoomCode = roomCode.trim().toUpperCase();
+  const nextGameState: {
+    phase: Phase;
+    updated_at: string;
+    night_sub_phase?: NightSubPhase;
+  } = {
+    phase,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (nightSubPhase) {
+    nextGameState.night_sub_phase = nightSubPhase;
+  }
+
+  const { error } = await supabase
+    .from("game_state")
+    .update(nextGameState)
+    .eq("room_code", normalizedRoomCode);
+
+  if (error) {
+    throw new Error(`Failed to update the game phase: ${error.message}`);
+  }
+}
+
+export async function advanceNightSubPhase(
+  roomCode: string,
+  subPhase: NightSubPhase
+): Promise<void> {
   const normalizedRoomCode = roomCode.trim().toUpperCase();
 
   const { error } = await supabase
     .from("game_state")
     .update({
-      phase,
+      night_sub_phase: subPhase,
       updated_at: new Date().toISOString(),
     })
     .eq("room_code", normalizedRoomCode);
 
   if (error) {
-    throw new Error(`Failed to update the game phase: ${error.message}`);
+    throw new Error(`Failed to advance the night sub-phase: ${error.message}`);
   }
 }
 
@@ -125,6 +158,4 @@ export async function finalizeNight(
       );
     }
   }
-
-  await updatePhase(normalizedRoomCode, "day");
 }

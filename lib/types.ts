@@ -1,5 +1,12 @@
 export type Phase = "lobby" | "role-reveal" | "night" | "day" | "vote" | "end";
 
+export type NightSubPhase =
+  | "none"
+  | "mafia_acting"
+  | "doctor_acting"
+  | "detective_acting"
+  | "night_complete";
+
 export type Player = {
   id: string;
   room_code: string;
@@ -22,5 +29,6 @@ export type GameState = {
   phase: Phase;
   round_number: number;
   night_result: string | null;
+  night_sub_phase: NightSubPhase;
   updated_at: string;
 };

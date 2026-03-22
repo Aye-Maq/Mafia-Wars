@@ -1,7 +1,7 @@
 # Mafia Wars - Current Context
 
 ## Status
-Role assignment and role reveal are built. Night phase logic is not built yet.
+Night phase now follows sequenced sub-phases. Day phase logic is not built yet.
 
 ## Completed
 - [x] Supabase project created
@@ -29,12 +29,17 @@ Role assignment and role reveal are built. Night phase logic is not built yet.
 - [x] Night phase built: MafiaAction, DoctorAction, DetectiveAction components
 - [x] /lib/nightUtils.ts created for all night action database ops
 - [x] /app/night/page.tsx replaced with real night phase logic
+- [x] Night sub-phases added to game_state table
+- [x] NightSubPhaseWatcher component created
+- [x] Night phase now follows strict GDD sequence: mafia -> doctor -> detective with correct screens for each role
+- [x] Lobby waiting screen now includes PhaseWatcher so all players auto-navigate when game starts
 
 ## Up Next
 - [ ] Day phase: announce who was killed, start discussion timer
 - [ ] Voting phase: players vote to eliminate someone
 - [ ] End phase: full role reveal and winner announcement
 - [ ] Win condition checks after each elimination
+- [ ] Add PhaseWatcher to every remaining page
 
 ## Decisions Made
 - Discussion timer options are 3, 5, or 7 minutes (host picks in lobby)
@@ -44,3 +49,4 @@ Role assignment and role reveal are built. Night phase logic is not built yet.
 
 ## Known Issues
 - Page refresh in the lobby loses roomCode and playerId from client state. Acceptable for v1.
+- Night sub-phase advances have a race condition risk if two clients fire simultaneously. Acceptable for v1 since only one of each role exists per game.

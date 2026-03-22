@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import PhaseWatcher from "@/components/PhaseWatcher";
 import CreateRoom from "@/components/lobby/CreateRoom";
 import JoinRoom from "@/components/lobby/JoinRoom";
 import PlayerList from "@/components/lobby/PlayerList";
@@ -72,12 +73,19 @@ export default function LobbyPage() {
 
     if (view === "waiting" && session.roomCode && session.playerId) {
       return (
-        <PlayerList
-          roomCode={session.roomCode}
-          isHost={session.isHost}
-          onStartGame={handleStartGame}
-          isStartingGame={isStartingGame}
-        />
+        <>
+          <PhaseWatcher
+            roomCode={session.roomCode}
+            playerId={session.playerId}
+            currentPhase="lobby"
+          />
+          <PlayerList
+            roomCode={session.roomCode}
+            isHost={session.isHost}
+            onStartGame={handleStartGame}
+            isStartingGame={isStartingGame}
+          />
+        </>
       );
     }
 
