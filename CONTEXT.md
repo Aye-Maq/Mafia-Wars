@@ -1,7 +1,7 @@
 # Mafia Wars - Current Context
 
 ## Status
-Night phase now follows sequenced sub-phases. Day phase logic is not built yet.
+Full game loop is built end to end. Audio and polish remain.
 
 ## Completed
 - [x] Supabase project created
@@ -33,13 +33,17 @@ Night phase now follows sequenced sub-phases. Day phase logic is not built yet.
 - [x] NightSubPhaseWatcher component created
 - [x] Night phase now follows strict GDD sequence: mafia -> doctor -> detective with correct screens for each role
 - [x] Lobby waiting screen now includes PhaseWatcher so all players auto-navigate when game starts
+- [x] Day phase built with night result announcement and discussion timer
+- [x] Voting phase built with live vote counts and elimination
+- [x] End screen built with full role reveal and Play Again
+- [x] Win condition checks integrated after every elimination
+- [x] Full game loop is complete end to end
 
 ## Up Next
-- [ ] Day phase: announce who was killed, start discussion timer
-- [ ] Voting phase: players vote to eliminate someone
-- [ ] End phase: full role reveal and winner announcement
-- [ ] Win condition checks after each elimination
-- [ ] Add PhaseWatcher to every remaining page
+- [ ] Audio narration for night phase
+- [ ] UI overhaul by Gemini - all pages need dark noir styling
+- [ ] Play Again flow needs full testing
+- [ ] Vercel deployment
 
 ## Decisions Made
 - Discussion timer options are 3, 5, or 7 minutes (host picks in lobby)
@@ -50,3 +54,5 @@ Night phase now follows sequenced sub-phases. Day phase logic is not built yet.
 ## Known Issues
 - Page refresh in the lobby loses roomCode and playerId from client state. Acceptable for v1.
 - Night sub-phase advances have a race condition risk if two clients fire simultaneously. Acceptable for v1 since only one of each role exists per game.
+- Vote resolution has a cross-device race risk if multiple clients hit onVotingComplete simultaneously. Acceptable for v1.
+- Play Again resets player data but players need to manually navigate back to lobby.

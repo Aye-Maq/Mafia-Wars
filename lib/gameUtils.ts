@@ -159,3 +159,64 @@ export async function finalizeNight(
     }
   }
 }
+
+export async function resetGame(roomCode: string): Promise<void> {
+  const normalizedRoomCode = roomCode.trim().toUpperCase();
+  const updatedAt = new Date().toISOString();
+
+  const { error: playersError } = await supabase
+    .from("players")
+    .update({
+      is_alive: true,
+      role: null,
+    })
+    .eq("room_code", normalizedRoomCode);
+
+  if (playersError) {
+    throw new Error(`Failed to reset players: ${playersError.message}`);
+  }
+
+  const { error: roomError } = await supabase
+    .from("rooms")
+    .update({ status: "lobby" })
+    .eq("room_code", normalizedRoomCode);
+
+  if (roomError) {
+    throw new Error(`Failed to reset the room: ${roomError.message}`);
+  }
+
+  const { error: gameStateError } = await supabase
+    .from("game_state")
+    .update({
+      phase: "lobby",
+      round_number: 1,
+      night_result: null,
+      night_sub_phase: "none",
+      updated_at: updatedAt,
+    })
+    .eq("room_code", normalizedRoomCode);
+
+  if (gameStateError) {
+    throw new Error(`Failed to reset game state: ${gameStateError.message}`);
+  }
+
+  const { error: votesError } = await supabase
+    .from("votes")
+    .delete()
+    .eq("room_code", normalizedRoomCode);
+
+  if (votesError) {
+    throw new Error(`Game reset started, but clearing votes failed: ${votesError.message}`);
+  }
+
+  const { error: nightActionsError } = await supabase
+    .from("night_actions")
+    .delete()
+    .eq("room_code", normalizedRoomCode);
+
+  if (nightActionsError) {
+    throw new Error(
+      `Game reset started, but clearing night actions failed: ${nightActionsError.message}`
+    );
+  }
+}
