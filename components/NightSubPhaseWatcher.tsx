@@ -19,6 +19,8 @@ export default function NightSubPhaseWatcher({
       return;
     }
 
+    let isMounted = true;
+
     const channel = supabase
       .channel(`night-sub-phase:${roomCode}`)
       .on(
@@ -41,7 +43,28 @@ export default function NightSubPhaseWatcher({
       )
       .subscribe();
 
+    async function syncCurrentSubPhase() {
+      const { data: gameState, error } = await supabase
+        .from("game_state")
+        .select("night_sub_phase")
+        .eq("room_code", roomCode)
+        .maybeSingle();
+
+      if (!isMounted || error) {
+        return;
+      }
+
+      const currentSubPhase = gameState?.night_sub_phase as NightSubPhase | undefined;
+
+      if (currentSubPhase && currentSubPhase !== "none") {
+        onSubPhaseChange(currentSubPhase);
+      }
+    }
+
+    void syncCurrentSubPhase();
+
     return () => {
+      isMounted = false;
       void supabase.removeChannel(channel);
     };
   }, [onSubPhaseChange, roomCode]);
