@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import CreateRoom from "@/components/lobby/CreateRoom";
 import JoinRoom from "@/components/lobby/JoinRoom";
 import PlayerList from "@/components/lobby/PlayerList";
+import { startGame } from "@/lib/gameUtils";
 
 type LobbyView = "choosing" | "creating" | "joining" | "waiting";
 
@@ -21,8 +23,11 @@ const EMPTY_SESSION: LobbySession = {
 };
 
 export default function LobbyPage() {
+  const router = useRouter();
   const [view, setView] = useState<LobbyView>("choosing");
   const [session, setSession] = useState<LobbySession>(EMPTY_SESSION);
+  const [isStartingGame, setIsStartingGame] = useState(false);
+  const [startGameError, setStartGameError] = useState("");
 
   function handleRoomCreated(roomCode: string, playerId: string) {
     setSession({ roomCode, playerId, isHost: true });
@@ -34,8 +39,26 @@ export default function LobbyPage() {
     setView("waiting");
   }
 
-  function handleStartGame() {
-    console.log("Starting game...");
+  async function handleStartGame() {
+    setIsStartingGame(true);
+    setStartGameError("");
+
+    try {
+      await startGame(session.roomCode);
+
+      const searchParams = new URLSearchParams({
+        roomCode: session.roomCode,
+        playerId: session.playerId,
+      });
+
+      router.push(`/role-reveal?${searchParams.toString()}`);
+    } catch (error) {
+      setStartGameError(
+        error instanceof Error ? error.message : "Could not start the game."
+      );
+    } finally {
+      setIsStartingGame(false);
+    }
   }
 
   function renderCurrentView() {
@@ -53,6 +76,7 @@ export default function LobbyPage() {
           roomCode={session.roomCode}
           isHost={session.isHost}
           onStartGame={handleStartGame}
+          isStartingGame={isStartingGame}
         />
       );
     }
@@ -86,6 +110,10 @@ export default function LobbyPage() {
             Create a room for your group or join an existing one.
           </p>
         </div>
+
+        {startGameError ? (
+          <p className="text-sm text-red-600">{startGameError}</p>
+        ) : null}
 
         {renderCurrentView()}
 

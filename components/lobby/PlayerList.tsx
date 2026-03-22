@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { MIN_PLAYERS } from "@/lib/constants";
 import { getRoomPlayers } from "@/lib/roomUtils";
@@ -12,14 +11,15 @@ type PlayerListProps = {
   roomCode: string;
   isHost: boolean;
   onStartGame: () => void;
+  isStartingGame?: boolean;
 };
 
 export default function PlayerList({
   roomCode,
   isHost,
   onStartGame,
+  isStartingGame = false,
 }: PlayerListProps) {
-  const router = useRouter();
   const [players, setPlayers] = useState<Player[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -76,11 +76,6 @@ export default function PlayerList({
     };
   }, [roomCode]);
 
-  function handleStartGameClick() {
-    onStartGame();
-    router.push("/role-reveal");
-  }
-
   return (
     <div className="space-y-4">
       <div className="space-y-1">
@@ -110,10 +105,10 @@ export default function PlayerList({
         <button
           className="w-full rounded-md bg-black px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
           type="button"
-          onClick={handleStartGameClick}
-          disabled={players.length < MIN_PLAYERS}
+          onClick={onStartGame}
+          disabled={players.length < MIN_PLAYERS || isStartingGame}
         >
-          Start Game
+          {isStartingGame ? "Starting Game..." : "Start Game"}
         </button>
       ) : null}
 

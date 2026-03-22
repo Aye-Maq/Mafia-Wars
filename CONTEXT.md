@@ -1,7 +1,7 @@
 # Mafia Wars - Current Context
 
 ## Status
-Lobby page complete. No game logic built yet.
+Role assignment and role reveal are built. Night phase logic is not built yet.
 
 ## Completed
 - [x] Supabase project created
@@ -20,10 +20,15 @@ Lobby page complete. No game logic built yet.
 - [x] /components/lobby/CreateRoom.tsx created
 - [x] /components/lobby/JoinRoom.tsx created
 - [x] /components/lobby/PlayerList.tsx created with live Supabase Realtime subscription
+- [x] Role assignment logic implemented in /lib/gameLogic.ts
+- [x] Game progression database writes in /lib/gameUtils.ts
+- [x] Start Game now triggers real role assignment and navigation
+- [x] Role reveal page built at /app/role-reveal/page.tsx
+- [x] RoleCard component built at /components/role-reveal/RoleCard.tsx
 
 ## Up Next
-- [ ] Game start logic: on Start Game, assign roles and update game_state phase to 'role-reveal'
-- [ ] Role reveal page
+- [ ] Night phase: Mafia vote screen, Doctor save screen, Detective investigate screen
+- [ ] All night actions need separate components per role
 
 ## Decisions Made
 - Discussion timer options are 3, 5, or 7 minutes (host picks in lobby)
