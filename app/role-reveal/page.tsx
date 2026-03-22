@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import PhaseWatcher from "@/components/PhaseWatcher";
 import RoleCard from "@/components/role-reveal/RoleCard";
@@ -16,6 +16,7 @@ type RoleRevealState = {
 };
 
 function RoleRevealContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const roomCode = searchParams.get("roomCode") ?? "";
   const playerId = searchParams.get("playerId") ?? "";
@@ -90,6 +91,30 @@ function RoleRevealContent() {
 
   async function handleRevealComplete() {
     setIsWaitingForNight(true);
+
+    const { data: gameState, error: gameStateError } = await supabase
+      .from("game_state")
+      .select("phase")
+      .eq("room_code", roomCode)
+      .maybeSingle();
+
+    if (gameStateError) {
+      setErrorMessage(
+        `Could not check the current game phase: ${gameStateError.message}`
+      );
+      setIsWaitingForNight(false);
+      return;
+    }
+
+    if (gameState?.phase === "night") {
+      const nextSearchParams = new URLSearchParams({
+        roomCode,
+        playerId,
+      });
+
+      router.push(`/night?${nextSearchParams.toString()}`);
+      return;
+    }
 
     if (!roleRevealState?.isHost) {
       return;
