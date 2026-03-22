@@ -10,7 +10,8 @@ type CreateRoomProps = {
 };
 
 export default function CreateRoom({ onRoomCreated }: CreateRoomProps) {
-  const [hostName, setHostName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [timerConfig, setTimerConfig] = useState<number>(
     DISCUSSION_TIMER_OPTIONS[1]
   );
@@ -19,11 +20,21 @@ export default function CreateRoom({ onRoomCreated }: CreateRoomProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsLoading(true);
     setErrorMessage("");
 
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+
+    if (!trimmedFirstName || !trimmedLastName) {
+      setErrorMessage("First name and last name are required.");
+      return;
+    }
+
+    setIsLoading(true);
+
     try {
-      const result = await createRoom(hostName, timerConfig);
+      const fullName = `${trimmedFirstName} ${trimmedLastName}`;
+      const result = await createRoom(fullName, timerConfig);
       onRoomCreated(result.roomCode, result.playerId);
     } catch (error) {
       setErrorMessage(
@@ -37,16 +48,31 @@ export default function CreateRoom({ onRoomCreated }: CreateRoomProps) {
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-2">
-        <label className="block text-sm font-medium" htmlFor="host-name">
-          Your Name
+        <label className="block text-sm font-medium" htmlFor="host-first-name">
+          First Name
         </label>
         <input
-          id="host-name"
-          className="w-full rounded-md border px-3 py-2"
+          id="host-first-name"
+          className="w-full rounded-md border px-3 py-2 text-gray-900"
           type="text"
-          value={hostName}
-          onChange={(event) => setHostName(event.target.value)}
+          value={firstName}
+          onChange={(event) => setFirstName(event.target.value)}
           placeholder="Enter your first name"
+          disabled={isLoading}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium" htmlFor="host-last-name">
+          Last Name
+        </label>
+        <input
+          id="host-last-name"
+          className="w-full rounded-md border px-3 py-2 text-gray-900"
+          type="text"
+          value={lastName}
+          onChange={(event) => setLastName(event.target.value)}
+          placeholder="Enter your last name"
           disabled={isLoading}
         />
       </div>
@@ -57,7 +83,7 @@ export default function CreateRoom({ onRoomCreated }: CreateRoomProps) {
         </label>
         <select
           id="timer-config"
-          className="w-full rounded-md border px-3 py-2"
+          className="w-full rounded-md border px-3 py-2 text-gray-900"
           value={timerConfig}
           onChange={(event) => setTimerConfig(Number(event.target.value))}
           disabled={isLoading}

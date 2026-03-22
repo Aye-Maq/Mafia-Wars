@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { MIN_PLAYERS } from "@/lib/constants";
 import { getRoomPlayers } from "@/lib/roomUtils";
@@ -18,6 +19,7 @@ export default function PlayerList({
   isHost,
   onStartGame,
 }: PlayerListProps) {
+  const router = useRouter();
   const [players, setPlayers] = useState<Player[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -74,6 +76,11 @@ export default function PlayerList({
     };
   }, [roomCode]);
 
+  function handleStartGameClick() {
+    onStartGame();
+    router.push("/role-reveal");
+  }
+
   return (
     <div className="space-y-4">
       <div className="space-y-1">
@@ -90,9 +97,9 @@ export default function PlayerList({
         <p className="text-sm text-red-600">{errorMessage}</p>
       ) : null}
 
-      <ul className="space-y-2 rounded-md border p-4">
+      <ul className="space-y-1">
         {players.map((player) => (
-          <li key={player.id} className="rounded-md bg-gray-100 px-3 py-2">
+          <li key={player.id}>
             {player.name}
             {player.is_host ? " (Host)" : ""}
           </li>
@@ -103,7 +110,7 @@ export default function PlayerList({
         <button
           className="w-full rounded-md bg-black px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
           type="button"
-          onClick={onStartGame}
+          onClick={handleStartGameClick}
           disabled={players.length < MIN_PLAYERS}
         >
           Start Game

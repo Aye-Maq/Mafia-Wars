@@ -10,19 +10,29 @@ type JoinRoomProps = {
 
 export default function JoinRoom({ onRoomJoined }: JoinRoomProps) {
   const [roomCode, setRoomCode] = useState("");
-  const [playerName, setPlayerName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsLoading(true);
     setErrorMessage("");
 
     const normalizedRoomCode = roomCode.trim().toUpperCase();
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+
+    if (!trimmedFirstName || !trimmedLastName) {
+      setErrorMessage("First name and last name are required.");
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
-      const result = await joinRoom(normalizedRoomCode, playerName);
+      const fullName = `${trimmedFirstName} ${trimmedLastName}`;
+      const result = await joinRoom(normalizedRoomCode, fullName);
 
       if ("error" in result) {
         setErrorMessage(result.error);
@@ -43,7 +53,7 @@ export default function JoinRoom({ onRoomJoined }: JoinRoomProps) {
         </label>
         <input
           id="room-code"
-          className="w-full rounded-md border px-3 py-2 uppercase"
+          className="w-full rounded-md border px-3 py-2 uppercase text-gray-900"
           type="text"
           value={roomCode}
           onChange={(event) => setRoomCode(event.target.value.toUpperCase())}
@@ -53,16 +63,31 @@ export default function JoinRoom({ onRoomJoined }: JoinRoomProps) {
       </div>
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium" htmlFor="player-name">
-          Your Name
+        <label className="block text-sm font-medium" htmlFor="player-first-name">
+          First Name
         </label>
         <input
-          id="player-name"
-          className="w-full rounded-md border px-3 py-2"
+          id="player-first-name"
+          className="w-full rounded-md border px-3 py-2 text-gray-900"
           type="text"
-          value={playerName}
-          onChange={(event) => setPlayerName(event.target.value)}
+          value={firstName}
+          onChange={(event) => setFirstName(event.target.value)}
           placeholder="Enter your first name"
+          disabled={isLoading}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium" htmlFor="player-last-name">
+          Last Name
+        </label>
+        <input
+          id="player-last-name"
+          className="w-full rounded-md border px-3 py-2 text-gray-900"
+          type="text"
+          value={lastName}
+          onChange={(event) => setLastName(event.target.value)}
+          placeholder="Enter your last name"
           disabled={isLoading}
         />
       </div>
