@@ -12,5 +12,3 @@ export const PHASES = [
   "vote",
   "end",
 ] as const;
-
-export type Phase = (typeof PHASES)[number];
