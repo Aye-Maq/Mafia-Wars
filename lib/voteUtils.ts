@@ -21,7 +21,16 @@ export async function submitVote(
   }
 
   if (existingVote) {
-    throw new Error("You have already voted this round.");
+    const { error: updateError } = await supabase
+      .from("votes")
+      .update({ target_id: targetId })
+      .eq("id", existingVote.id as string);
+
+    if (updateError) {
+      throw new Error(`Failed to update the vote: ${updateError.message}`);
+    }
+
+    return;
   }
 
   const { error } = await supabase.from("votes").insert({

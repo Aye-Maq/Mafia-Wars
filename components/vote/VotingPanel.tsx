@@ -36,7 +36,7 @@ export default function VotingPanel({
   const [targets, setTargets] = useState<VotingTarget[]>([]);
   const [voteCounts, setVoteCounts] = useState<VoteCount[]>([]);
   const [secondsRemaining, setSecondsRemaining] = useState(VOTING_TIMER);
-  const [hasVoted, setHasVoted] = useState(false);
+  const [selectedTargetName, setSelectedTargetName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const hasCompletedRef = useRef(false);
@@ -142,12 +142,12 @@ export default function VotingPanel({
     };
   }, [completeVoting]);
 
-  async function handleVote(targetId: string) {
+  async function handleVote(targetId: string, targetName: string) {
     setErrorMessage("");
 
     try {
       await submitVote(roomCode, playerId, targetId, round);
-      setHasVoted(true);
+      setSelectedTargetName(targetName);
       const counts = await getVoteCounts(roomCode, round);
       setVoteCounts(counts);
     } catch (error) {
@@ -187,18 +187,17 @@ export default function VotingPanel({
         {votesCast} of {livingPlayerCount} players have voted
       </p>
       {isLoading ? <p>Loading voting targets...</p> : null}
-      {hasVoted ? <p>Vote cast. Waiting for others...</p> : null}
+      {selectedTargetName ? <p>Vote cast for {selectedTargetName}</p> : null}
       {errorMessage ? <p className="text-red-600">{errorMessage}</p> : null}
       <div className="space-y-2">
         {targets.map((target) => (
           <button
             key={target.id}
-            className="block w-full rounded border px-4 py-2 text-left disabled:opacity-60"
+            className="block w-full rounded border px-4 py-2 text-left"
             type="button"
             onClick={() => {
-              void handleVote(target.id);
+              void handleVote(target.id, target.name);
             }}
-            disabled={hasVoted}
           >
             {target.name}
           </button>
